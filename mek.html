@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mektup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap');
+
+  :root {
+    --paper-color: #fdf8f0;
+    --envelope-color: #e8d5b0;
+    --envelope-dark: #c9b48a;
+    --envelope-darker: #a8915e;
+    --ink: #1a1008;
+    --bg: #2c1f0e;
+    --wax: #8b1a1a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Cormorant Garamond', serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 60%, rgba(120,80,20,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse at 75% 30%, rgba(80,40,10,0.14) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .particles { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .particle {
+    position: absolute; border-radius: 50%;
+    background: rgba(220,180,80,0.35);
+    animation: floatUp linear infinite;
+  }
+  @keyframes floatUp {
+    0%   { transform: translateY(100vh); opacity: 0; }
+    10%  { opacity: 1; }
+    90%  { opacity: 0.4; }
+    100% { transform: translateY(-10vh); opacity: 0; }
+  }
+
+  .stage {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 44px;
+  }
+
+  /* ===== SCENE ===== */
+  .scene {
+    width: 340px;
+    height: 240px;
+    position: relative;
+    perspective: 1000px;
+  }
+
+  .env-body {
+    position: absolute; inset: 0;
+    background: var(--envelope-color);
+    border-radius: 4px;
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.6),
+      0 4px 15px rgba(0,0,0,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.15);
+    overflow: hidden;
+    z-index: 2;
+  }
+  .env-left {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 50%;
+    background: var(--envelope-dark);
+    clip-path: polygon(0 0, 100% 50%, 0 100%);
+    opacity: 0.5;
+  }
+  .env-right {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 50%;
+    background: var(--envelope-dark);
+    clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    opacity: 0.5;
+  }
+  .env-bottom {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 55%;
+    background: var(--envelope-darker);
+    clip-path: polygon(0 100%, 50% 0%, 100% 100%);
+    opacity: 0.7;
+  }
+  .wax-seal {
+    position: absolute; bottom: 18px; left: 50%;
+    transform: translateX(-50%);
+    width: 44px; height: 44px;
+    background: radial-gradient(circle at 35% 35%, #b22222, var(--wax) 50%, #5a0e0e);
+    border-radius: 50%;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,150,150,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; z-index: 5;
+    transition: opacity 0.4s ease;
+  }
+
+  /* ===== FLAP ===== */
+  .env-flap {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 55%;
+    transform-origin: left center;
+    z-index: 10;
+    transform: rotate(0deg) translateX(0px);
+    opacity: 1;
+    transition:
+      transform 0.85s cubic-bezier(0.4, 0, 0.6, 1),
+      opacity 0.3s ease 0.6s;
+  }
+  .env-flap-face {
+    position: absolute; inset: 0;
+    background: var(--envelope-color);
+    clip-path: polygon(0 0, 50% 90%, 100% 0);
+    box-shadow: 2px 4px 12px rgba(0,0,0,0.25);
+  }
+  .env-flap-face::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(170deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+    clip-path: polygon(0 0, 50% 90%, 100% 0);
+  }
+
+  .flap-open .env-flap {
+    transform: rotate(70deg) translateX(420px) translateY(-60px);
+    opacity: 0;
+  }
+  .flap-open .wax-seal {
+    opacity: 0;
+  }
+
+  /* ===== PAPER — completely hidden inside envelope ===== */
+  .paper-wrapper {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 310px;
+    /* hide below envelope bottom edge, clipped by env-body overflow:hidden effect via z-index stacking */
+    bottom: -200px;
+    z-index: 1;
+    transition: bottom 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .paper {
+    width: 100%;
+    background: var(--paper-color);
+    border-radius: 2px;
+    padding: 30px 28px 28px;
+    position: relative;
+    overflow: hidden;
+    transform: scaleY(0.12);
+    transform-origin: bottom center;
+    transition: transform 0.85s cubic-bezier(0.34, 1.4, 0.64, 1);
+    box-shadow:
+      0 -4px 20px rgba(0,0,0,0.35),
+      0 2px 8px rgba(0,0,0,0.2);
+  }
+  .paper::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      transparent, transparent 27px,
+      rgba(180,150,100,0.13) 27px,
+      rgba(180,150,100,0.13) 28px
+    );
+    pointer-events: none;
+  }
+
+  .paper-content {
+    position: relative; z-index: 1;
+    opacity: 0; transform: translateY(6px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .paper-content.visible { opacity: 1; transform: translateY(0); }
+
+  .paper-message {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px; font-weight: 700;
+    color: var(--ink); line-height: 1.4;
+    text-align: center;
+  }
+
+  .risen .paper-wrapper {
+    bottom: 265px;
+  }
+  .unfolded .paper {
+    transform: scaleY(1);
+  }
+
+  /* ===== ZOOM OVERLAY ===== */
+  #zoomOverlay {
+    position: fixed; inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 0;
+  }
+  #zoomOverlay.active {
+    pointer-events: all;
+  }
+  #zoomOverlay::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(20,12,4,0.0);
+    transition: background 0.7s ease;
+  }
+  #zoomOverlay.active::before {
+    background: rgba(20,12,4,0.78);
+  }
+
+  #zoomPaper {
+    position: relative; z-index: 1;
+    width: min(340px, 88vw);
+    background: var(--paper-color);
+    border-radius: 3px;
+    padding: 44px 36px 40px;
+    box-shadow:
+      0 30px 80px rgba(0,0,0,0.7),
+      0 8px 24px rgba(0,0,0,0.4);
+    transform: scale(0.3) translateY(60px);
+    opacity: 0;
+    transition:
+      transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.6s ease;
+    text-align: center;
+  }
+  #zoomPaper::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      transparent, transparent 27px,
+      rgba(180,150,100,0.13) 27px,
+      rgba(180,150,100,0.13) 28px
+    );
+    pointer-events: none;
+    border-radius: 3px;
+  }
+  #zoomOverlay.active #zoomPaper {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+
+  .zoom-message {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(20px, 5vw, 28px);
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.4;
+    position: relative; z-index: 1;
+    margin-bottom: 28px;
+  }
+
+  .zoom-link {
+    position: relative; z-index: 1;
+    display: inline-block;
+    color: var(--ink);
+    text-decoration: underline;
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 5vw, 30px);
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 8px 4px;
+    transition: color 0.2s;
+  }
+  .zoom-link:hover {
+    color: #8b1a1a;
+  }
+
+  /* ===== BUTTON ===== */
+  #openBtn {
+    background: transparent;
+    border: 1px solid rgba(220,180,100,0.5);
+    color: rgba(220,180,100,0.85);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 13px; letter-spacing: 4px;
+    text-transform: uppercase;
+    padding: 14px 38px; border-radius: 2px;
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s, border-color 0.3s, opacity 0.5s, transform 0.5s;
+    position: relative; z-index: 10;
+  }
+  #openBtn:hover {
+    background: rgba(220,180,100,0.1);
+    border-color: rgba(220,180,100,0.85);
+    color: rgba(220,180,100,1);
+  }
+  #openBtn.hide {
+    opacity: 0; transform: translateY(8px);
+    pointer-events: none;
+  }
+
+  .env-shadow {
+    position: absolute; bottom: -26px; left: 50%;
+    transform: translateX(-50%);
+    width: 75%; height: 18px;
+    background: rgba(0,0,0,0.35);
+    border-radius: 50%; filter: blur(12px);
+  }
+</style>
+</head>
+<body>
+
+<div class="particles" id="particles"></div>
+
+<div class="stage">
+  <div class="scene" id="scene">
+
+    <div class="paper-wrapper" id="paperWrapper">
+      <div class="paper" id="paper">
+        <div class="paper-content" id="paperContent">
+        </div>
+      </div>
+    </div>
+
+    <div class="env-body">
+      <div class="env-left"></div>
+      <div class="env-right"></div>
+      <div class="env-bottom"></div>
+      <div class="wax-seal">✦</div>
+    </div>
+
+    <div class="env-flap" id="envFlap">
+      <div class="env-flap-face"></div>
+    </div>
+
+    <div class="env-shadow"></div>
+  </div>
+
+  <button id="openBtn">Mektubu Aç</button>
+</div>
+
+<!-- Zoom overlay -->
+<div id="zoomOverlay">
+  <div id="zoomPaper">
+    <a class="zoom-link" href="https://www.youtube.com/watch?v=qVC_ghSKpyA&list=LL&index=18" target="_blank" rel="noopener">
+      BUNA TIKLAMA
+    </a>
+  </div>
+</div>
+
+<script>
+  // Particles
+  const pc = document.getElementById('particles');
+  for (let i = 0; i < 22; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.left = Math.random() * 100 + '%';
+    const s = 1 + Math.random() * 3;
+    p.style.width = p.style.height = s + 'px';
+    p.style.animationDuration = (9 + Math.random() * 14) + 's';
+    p.style.animationDelay = (Math.random() * 14) + 's';
+    pc.appendChild(p);
+  }
+
+  const btn = document.getElementById('openBtn');
+  const scene = document.getElementById('scene');
+  const paperContent = document.getElementById('paperContent');
+  const zoomOverlay = document.getElementById('zoomOverlay');
+  let animating = false;
+
+  btn.addEventListener('click', () => {
+    if (animating) return;
+    animating = true;
+
+    btn.classList.add('hide');
+
+    // 1. Flap flies sideways
+    scene.classList.add('flap-open');
+
+    // 2. Paper rises
+    setTimeout(() => {
+      scene.classList.add('risen');
+    }, 500);
+
+    // 3. Paper unfolds
+    setTimeout(() => {
+      scene.classList.add('unfolded');
+    }, 1300);
+
+    // 4. Show text in small paper
+    setTimeout(() => {
+      paperContent.classList.add('visible');
+    }, 1900);
+
+    // 5. Zoom overlay
+    setTimeout(() => {
+      zoomOverlay.style.opacity = '1';
+      zoomOverlay.classList.add('active');
+    }, 2300);
+  });
+</script>
+</body>
+</html>
